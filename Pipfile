@@ -7,6 +7,9 @@ name = "pypi"
 pytest = "*"
 pillow = "*"
 numpy = "*"
+black = "*"
+flake8 = "*"
+pre-commit = "*"
 
 [dev-packages]
 
