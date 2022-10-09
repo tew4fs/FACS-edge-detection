@@ -1,12 +1,8 @@
 - id: black
   name: black
   description: "Black: The uncompromising Python code formatter"
-  entry: black
+  entry: black .
   language: python
-  stages: [commit]
-- id: flake8
-  name: flake8
-  description: "Flake8: The uncompromising Python code linter"
-  entry: flake8
-  language: python
+  pass_filenames: false
+  always_run: true
   stages: [commit]
