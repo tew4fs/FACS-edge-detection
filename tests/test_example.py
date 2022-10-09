@@ -1,6 +1,4 @@
 # import pytest
-
-
 class TestClass:
     def testOne(self):
         x = "this"

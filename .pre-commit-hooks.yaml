@@ -1,8 +1,0 @@
-- id: black
-  name: black
-  description: "Black: The uncompromising Python code formatter"
-  entry: black
-  language: python
-  pass_filenames: false
-  always_run: true
-  stages: [commit]
