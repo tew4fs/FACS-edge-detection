@@ -1,7 +1,7 @@
 .DEFAULT_GOAL := build
 
 run:
-	python facs/main.py
+	python src/main.py
 
 lint:
 	flake8 .

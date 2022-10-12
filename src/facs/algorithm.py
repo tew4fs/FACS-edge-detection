@@ -1,11 +1,13 @@
 from PIL import Image
 import numpy as np
 
-from image_processor import create_intensity_array
+from facs.image_processor import create_intensity_array
+from config.constants import *
 
 
 def create_edge_detection_image(image):
     intensity_array = create_intensity_array(image)
+    print(NUMBER_OF_ITERATIONS)
     # heuristics_array = get_heuristics_array(intensity_array)
     final_image = Image.fromarray(intensity_array)
     return final_image
