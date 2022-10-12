@@ -2,7 +2,7 @@ from PIL import Image
 import numpy as np
 
 from facs.image_processor import create_intensity_array
-from config.constants import *
+from config.constants import NUMBER_OF_ITERATIONS
 
 
 def create_edge_detection_image(image):
