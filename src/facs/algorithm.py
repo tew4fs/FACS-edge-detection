@@ -9,7 +9,7 @@ def create_edge_detection_image(image):
     intensity_array = create_intensity_array(image)
     print(NUMBER_OF_ITERATIONS)
     # heuristics_array = get_heuristics_array(intensity_array)
-    final_image = Image.fromarray(intensity_array)
+    final_image = Image.fromarray((intensity_array).astype(np.uint8))
     return final_image
 
 
