@@ -21,8 +21,7 @@ def create_edge_detection_image(image):
     heuristics_array = get_heuristics_array(intensity_array)
     ranked_heuristics_map = get_ranked_heuristics_map(heuristics_array)
     global_pheromones = run_algorithm(intensity_array, ranked_heuristics_map)
-    np.savetxt('pheromones.txt', global_pheromones)
-    final_image = Image.fromarray((global_pheromones).astype(np.uint8))
+    final_image = Image.fromarray((global_pheromones * 2550).astype(np.uint8))
     return final_image
 
 
@@ -31,27 +30,27 @@ def run_algorithm(intensity_array, heuristics_map):
     image_height = intensity_array.shape[0]
     image_width = intensity_array.shape[1]
     ants = _initialize_ants(initial_positions)
-    ant_visited_pixels = _initialize_ant_visited_pixels_dict()
-    global_pheromones = np.full((image_height, image_width), 0)
+    global_pheromones = np.zeros((image_height, image_width))
     for iteration in range(NUMBER_OF_ITERATIONS):
         print(f"Iteration: {iteration}")
-        local_pheromones = np.full((image_height, image_width), 0)
+        local_pheromones = _initialize_ant_local_pheromones_dict()
+        ant_visited_pixels = _initialize_ant_visited_pixels_dict()
         for construction in range(NUMBER_OF_CONSTRUCTIONS):
-            #print(f"Construction: {construction}")
+            print(f"Construction: {construction}")
             for ant in range(NUMBER_OF_ANTS):
                 ant_location = ants[ant]
                 visited_pixels = ant_visited_pixels[ant]
                 pixel = move_pixel(
-                    ant_location, image_height, image_width, visited_pixels, local_pheromones, heuristics_map
+                    ant_location, image_height, image_width, visited_pixels, global_pheromones, heuristics_map
                 )
                 ant_visited_pixels[ant].append(ants[ant])
                 ants[ant] = pixel
-                local_pheromones = _update_local_pheromones(local_pheromones, ant_location[0], ant_location[1])
+                local_pheromones[ant] = _update_local_pheromones(local_pheromones[ant], ant_location)
         global_pheromones = _update_global_pheromones(global_pheromones, local_pheromones, ant_visited_pixels)
     return global_pheromones
 
 
-def move_pixel(ant_location, image_height, image_width, visited_pixels, local_pheromones, heuristics_map):
+def move_pixel(ant_location, image_height, image_width, visited_pixels, global_pheromones, heuristics_map):
     row_index = ant_location[0]
     column_index = ant_location[1]
     neighbors = _get_neighbors(row_index, column_index, image_height, image_width)
@@ -59,46 +58,43 @@ def move_pixel(ant_location, image_height, image_width, visited_pixels, local_ph
     uniform_random_value = random.uniform(0, 1)
     pixel = None
     if uniform_random_value <= DEGREE_OF_EXPLORTATION and unvisited_neighbors:
-        pixel = _get_best_unvisited_neighbor(unvisited_neighbors, local_pheromones, heuristics_map)
+        pixel = _get_best_unvisited_neighbor(unvisited_neighbors, global_pheromones, heuristics_map)
     else:
         pixel = _explore_neighbors(neighbors)
     return pixel
 
 
-def _update_local_pheromones(local_pheromone_array, row_index, column_index):
-    updated_local_pheromone_value = (1 - PHEROMONE_DECAY_COEFFICIENT) * local_pheromone_array[
-        row_index, column_index
-    ] + PHEROMONE_DECAY_COEFFICIENT * INITIAL_PHEROMONE_VALUE
-    print(updated_local_pheromone_value)
-    local_pheromone_array[row_index][column_index] = updated_local_pheromone_value
-    return local_pheromone_array
+def _update_local_pheromones(local_pheromones, pixel):
+    local_pheromones_value = 0
+    if pixel in local_pheromones:
+        local_pheromones_value = local_pheromones[pixel]
+    updated_local_pheromone_value = (
+        1 - PHEROMONE_DECAY_COEFFICIENT
+    ) * local_pheromones_value + PHEROMONE_DECAY_COEFFICIENT * INITIAL_PHEROMONE_VALUE
+    local_pheromones[pixel] = updated_local_pheromone_value
+    return local_pheromones
 
 
-def _update_global_pheromones(global_pheromone_array, local_pheromones, ant_visited_pixels):
-    image_height = global_pheromone_array.shape[0]
-    image_width = global_pheromone_array.shape[1]
-    for row_index in range(image_height):
-        for column_index in range(image_width):
-            # average_pheromone_level = _compute_average_pheromone_level(
-            #    row_index, column_index, local_pheromones, ant_visited_pixels
-            # )
-            updated_value = (
-                1 - PHEROMONE_EVAPORATION_COEFFICIENT
-            ) * global_pheromone_array[row_index][column_index] + (
-                PHEROMONE_EVAPORATION_COEFFICIENT * local_pheromones[row_index][column_index]
-            )
-            global_pheromone_array[row_index][column_index] = updated_value
-    return global_pheromone_array
-
-
-def _compute_average_pheromone_level(row_index, column_index, ant_local_pheromones, ant_visited_pixels):
-    pheromone_level = 0
-    number_visited = 1
+def _update_global_pheromones(global_pheromones, local_pheromones, ant_visited_pixels):
+    total_pixel_pheromone_levels = {}
     for ant in range(NUMBER_OF_ANTS):
-        if (row_index, column_index) in ant_visited_pixels[ant]:
-            pheromone_level += ant_local_pheromones[ant][row_index][column_index]
-            number_visited += 1
-    return pheromone_level / number_visited
+        for pixel in ant_visited_pixels[ant]:
+            if pixel in total_pixel_pheromone_levels:
+                total_pixel_pheromone_levels[pixel]["total_value"] += local_pheromones[ant][pixel]
+                total_pixel_pheromone_levels[pixel]["ants_visited"] += 1
+            else:
+                total_pixel_pheromone_levels[pixel] = {"total_value": local_pheromones[ant][pixel], "ants_visited": 1}
+
+    for pixel in total_pixel_pheromone_levels:
+        average_pheromone_level = (
+            total_pixel_pheromone_levels[pixel]["total_value"] / total_pixel_pheromone_levels[pixel]["ants_visited"]
+        )
+        updated_value = (1 - PHEROMONE_EVAPORATION_COEFFICIENT) * global_pheromones[pixel[0]][pixel[1]] + (
+            PHEROMONE_EVAPORATION_COEFFICIENT * average_pheromone_level
+        )
+        global_pheromones[pixel[0]][pixel[1]] = updated_value
+
+    return global_pheromones
 
 
 def _get_best_unvisited_neighbor(unvisited_neighbors, local_pheromones, heuristics_map):
@@ -236,3 +232,10 @@ def _initialize_ant_visited_pixels_dict():
     for ant in range(NUMBER_OF_ANTS):
         ant_visted_pixels[ant] = []
     return ant_visted_pixels
+
+
+def _initialize_ant_local_pheromones_dict():
+    ant_local_pheromones = {}
+    for ant in range(NUMBER_OF_ANTS):
+        ant_local_pheromones[ant] = {}
+    return ant_local_pheromones
